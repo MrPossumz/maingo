@@ -51,12 +51,11 @@ export default class MiddlewareStack {
     await this.#requestTaps
       .values()
       .toArray()
-      .reverse()
       .reduce((p: () => Promise<void> | void, c) => () => {
         wasInvoked = false;
         // deno-fmt-ignore
-        c(request.clone(), () => {  wasInvoked = true; lastInvokedStep--; p(); });
-      }, next);
+        c(() => {  wasInvoked = true; lastInvokedStep--; p(); }, request.clone());
+      }, next)();
 
     if (!wasInvoked) {
       throw Error(

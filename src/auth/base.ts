@@ -1,10 +1,10 @@
 import type { Catalog } from "@/types.ts";
 import type { Client } from "@/client.ts";
-import type { Config } from "@/config.ts";
 import type { RequestMap, ResponseMap } from "@/middleware/types.ts";
+import type { AuthConfig } from "@/auth/types.ts";
 
 export abstract class AuthBase<L extends Catalog> {
-  constructor(protected config: Config) {}
+  constructor(protected config: AuthConfig) {}
 
   /**
    * A callback used to patch in whatever authentication logic

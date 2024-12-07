@@ -1,10 +1,11 @@
 import type { Catalog } from "@/types.ts";
-import { type Config, isConfig } from "@/config.ts";
+import {  isConfig } from "@/config.ts";
 import type { RequestMap } from "@/middleware/types.ts";
 import { AuthBase } from "./base.ts";
 import { createTypeGuard, Is } from "guardis";
+import type { AuthConfig } from "@/auth/types.ts";
 
-export interface BasicAuthConfig extends Config {
+export interface BasicAuthConfig extends AuthConfig {
   auth: typeof BasicAuth["type"];
   userId: string;
   userPass: string;

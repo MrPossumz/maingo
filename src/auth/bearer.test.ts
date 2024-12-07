@@ -6,8 +6,6 @@ Deno.test("BearerAuth", async () => {
   assertEquals(BearerAuth.type, "bearer");
 
   const auth = new BearerAuth<Catalog>({
-    connector: "REST",
-    hostname: "yes",
     auth: "bearer",
     token: "123",
   });

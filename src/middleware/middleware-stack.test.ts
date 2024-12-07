@@ -5,22 +5,22 @@ Deno.test("request-tap", async (t) => {
   const stack = new MiddlewareStack();
   const wasCalled: number[] = [];
 
-  stack.tap("request", (_r, next) => {
+  stack.tap("request", (next) => {
+    next();
     wasCalled.push(1);
-    next();
   });
 
-  const removeTwo = stack.tap("request", (_r, next) => {
+  const removeTwo = stack.tap("request", (next) => {
+    next();
     wasCalled.push(2);
-    next();
   });
 
-  stack.tap("request", (_r, next) => {
+  stack.tap("request", (next) => {
+    next();
     wasCalled.push(3);
-    next();
   });
 
-  stack.applyRequestTap(new Request("http://test.com", {}), () => {});
+  await stack.applyRequestTap(new Request("http://test.com", {}), () => {});
 
   await t.step("applies", () => {
     assertEquals(wasCalled.length, 3);

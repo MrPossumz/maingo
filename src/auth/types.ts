@@ -5,6 +5,10 @@ import BasicAuth from "./basic.ts";
 import BearerAuth from "./bearer.ts";
 import OAuth2 from "./oauth2.ts";
 
+export interface AuthConfig {
+  auth: AuthType;
+}
+
 export type AuthType =
   | typeof NoAuth<Catalog>["type"]
   | typeof BasicAuth<Catalog>["type"]

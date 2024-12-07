@@ -1,15 +1,15 @@
 import { createTypeGuard } from "guardis";
 import type { Catalog } from "@/types.ts";
-import { type Config, isConfig } from "@/config.ts";
 import { AuthBase } from "./base.ts";
 import type { RequestMap } from "@/middleware/types.ts";
+import type { AuthConfig } from "@/auth/types.ts";
 
-export interface NoAuthConfig extends Config {
+export interface NoAuthConfig extends AuthConfig {
   auth: typeof NoAuth["type"];
 }
 
 export const isNoAuthConfig = createTypeGuard<NoAuthConfig>((v, has) => {
-  if (isConfig(v) && has(v, "auth", (v) => v === "none")) {
+  if (v && typeof v === "object" && has(v, "auth", (v) => v === "none")) {
     return v;
   }
 

@@ -19,8 +19,8 @@ export type RemoveMap = () => void;
 /** A method used to tap into the request before and immediately after the
  * request is fired. Taps must call the next method. */
 export type RequestTap = (
-  request: Request,
   next: () => Promise<void> | void,
+  request: Request,
 ) => Promise<void> | void;
 
 /** A method that will be executed immediately after the response is received. */

@@ -1,7 +1,7 @@
 import { createTypeGuard, Is } from "guardis";
 import type { Catalog } from "@/types.ts";
-import { type Config, isConfig } from "@/config.ts";
 import type { Client } from "@/client.ts";
+import { isConfig, type Config } from "@/config.ts";
 import type { RequestMap, ResponseMap } from "@/middleware/types.ts";
 import { AuthBase } from "./base.ts";
 
@@ -58,9 +58,9 @@ export default class OAuth2<L extends Catalog> extends AuthBase<L> {
 
   protected authorizing = false;
 
-	constructor(config: OAuth2Config) {
-		super(config);
-	}
+  constructor(config: OAuth2Config) {
+    super(config);
+  }
 
   override getAuthentication(client: Client<L>): RequestMap {
     return async (next) => {

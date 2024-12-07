@@ -10,7 +10,9 @@ import type {
   RequestComponents,
   RequestHeaders,
   RequestParams,
+  ResponseJson,
   ResponseStripped,
+  ResponseText,
 } from "@/types.ts";
 
 export type ConnectorType = typeof REST["type"] | typeof Graphql["type"];
@@ -105,6 +107,10 @@ export type ResponseResolver<
   M extends HTTPMethods | GraphqlMethods,
 > = K extends keyof L
   ? K extends EndpointString ? L[K][M]["response"] extends ResponseStripped ? L[K][M]["response"]
+    : L[K][M]["response"] extends string ? ResponseText<L[K][M]["response"]>
+    : L[K][M]["response"] extends unknown[] ? ResponseJson<L[K][M]["response"]>
+    : L[K][M]["response"] extends Record<string | number | symbol, unknown>
+      ? ResponseJson<L[K][M]["response"]>
     : Response
   : never
   : Response;

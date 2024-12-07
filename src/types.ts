@@ -1,6 +1,7 @@
 import type { RestCatalog, RestMethodsInterface } from "@/connectors/rest.ts";
 import type { GraphqlCatalog, GraphqlMethodsInterface } from "@/connectors/graphql.ts";
 import type { ExcludeFromUnion } from "@/utils/types.ts";
+import type { SearchParams } from "@/search-params.ts";
 
 /**	Matches a JSON object. */
 export type JsonObject =
@@ -21,6 +22,9 @@ export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
 /** JavaScript type that can be converted to a string. */
 export type Stringable<T = unknown> = T & { toString: () => string };
 
+/** Converts any readonly keys on a type to writeable. */
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
 /** Valid Api methods. */
 export type HTTPMethods =
   | "get"
@@ -35,12 +39,12 @@ export type HTTPMethods =
 
 export type GraphqlMethods = "query";
 
-/** Valid constructory types for URLSearchParams */
-export type URLSearchParamsInit =
+/** Valid constructory types for SearchParams */
+export type SearchParamsInit =
   | URLSearchParams
   | { [x: string]: Stringable }
-  | Exclude<ConstructorParameters<typeof URLSearchParams>[0], (string)[][]>
-  | [string, string][];
+  | Exclude<ConstructorParameters<typeof SearchParams>[0], (string)[][]>
+  | [Stringable, Stringable][];
 
 export type StdRequestComponents = {
   body: RequestBody;
@@ -86,11 +90,19 @@ export type ResponseBytes = ResponseNarrowed<"bytes">;
 /** An API response that should be interpreted as a FormData type. */
 export type ResponseFormData = ResponseNarrowed<"formData">;
 /** An API response that should be parsed as json. */
-export type ResponseJson<J = unknown> = ResponseStripped & { json(): Promise<J> };
+export type ResponseJson<J = unknown> = ResponseStripped & {
+  json(): Promise<J>;
+  text(): Promise<string>;
+};
 /** An API response that should be parsed as text. */
 export type ResponseText<T = string> = ResponseStripped & { text(): Promise<T> };
 
-export type RequestParams = URLSearchParamsInit | null;
+export type ResponseResolver<T> = T extends string ? ResponseText<T>
+  : T extends JsonObject ? ResponseJson<T>
+  : T extends string ? ResponseText<T>
+  : Response;
+
+export type RequestParams = SearchParamsInit | null;
 
 export type RequestBody =
   | Blob
@@ -121,8 +133,9 @@ export type Call = {
     | ResponseBlob
     | ResponseFormData
     | ResponseJson
-    | ResponseText;
-  errors: Record<string, string> | Record<string, never>;
+    | ResponseText
+    | unknown;
+  errors?: Record<string, string> | Record<string, never>;
 };
 
 export type EndpointString = `/${string}`;

@@ -5,11 +5,7 @@ import NoAuth from "./no-auth.ts";
 Deno.test("NoAuth", async () => {
   assertEquals(NoAuth.type, "none");
 
-  const auth = new NoAuth<Catalog>({
-    connector: "REST",
-    hostname: "yes",
-    auth: "none",
-  });
+  const auth = new NoAuth<Catalog>({ auth: "none" });
 
   assert("getAuthentication" in auth);
 

@@ -1,16 +1,17 @@
-import type { URLSearchParamsInit } from "@/types.ts";
+import type { SearchParamsInit, Stringable } from "@/types.ts";
 import { Is } from "@/guards.ts";
+import { SearchParams } from "@/search-params.ts";
 
 /** Convert any URL Search Param strings to URLSearchParams instance. */
-function stringToParams(params: Exclude<URLSearchParamsInit, undefined>) {
+function stringToParams(params: Exclude<SearchParamsInit, undefined>) {
   return typeof params === "string" ? new URLSearchParams(params) : params;
 }
 
 /** Convert [string, string][], Record<string, string>, URLSearchParams to
  * [string, string][] for use in creating a new URLSearchParams instance. */
 function paramsToEntries(
-  params: Exclude<URLSearchParamsInit, string | undefined>,
-): [string, string][] {
+  params: Exclude<SearchParamsInit, string | undefined>,
+): [Stringable, Stringable][] {
   return Array.isArray(params)
     ? params
     : params instanceof URLSearchParams
@@ -21,9 +22,9 @@ function paramsToEntries(
 /** Ensure that the URL Search Params Init is converted to
  * URLSearchParams object. */
 function toUrlSearchParams(
-  params: Exclude<URLSearchParamsInit, undefined>,
+  params: Exclude<SearchParamsInit, undefined>,
 ): URLSearchParams {
-  return Is.URLSearchParams(params) ? params : new URLSearchParams(params);
+  return Is.URLSearchParams(params) ? params : new SearchParams(params);
 }
 
 /**
@@ -34,8 +35,8 @@ function toUrlSearchParams(
  * @returns
  */
 export function concatSearchParams(
-  paramsOne: URLSearchParamsInit,
-  paramsTwo: URLSearchParamsInit,
+  paramsOne: SearchParamsInit,
+  paramsTwo: SearchParamsInit,
 ): URLSearchParams {
   if (!paramsOne) {
     return paramsTwo ? toUrlSearchParams(paramsTwo) : new URLSearchParams();
@@ -43,7 +44,7 @@ export function concatSearchParams(
     return toUrlSearchParams(paramsOne);
   }
 
-  return new URLSearchParams([
+  return new SearchParams([
     ...paramsToEntries(stringToParams(paramsOne!)),
     ...paramsToEntries(stringToParams(paramsTwo!)),
   ]);

@@ -6,9 +6,7 @@ Deno.test("BasicAuth", async () => {
   assertEquals(BasicAuth.type, "basic");
 
   const auth = new BasicAuth<Catalog>({
-    connector: "REST",
     auth: "basic",
-    "hostname": "yes",
     userId: "1",
     userPass: "2",
   });

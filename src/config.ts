@@ -59,7 +59,7 @@ export type ConnectorConfigResolver<L extends Catalog> = L extends RestCatalog ?
   : L extends GraphqlCatalog ? GraphqlConnectorConfig
   : Config;
 
-export type AuthConfigResolver<C extends Config, AuthType = C["auth"]> = AuthType extends
+export type AuthConfigResolver<C extends { auth?: AuthType }, AuthType = C["auth"]> = AuthType extends
   BasicAuthConfig["auth"] ? BasicAuthConfig
   : AuthType extends BearerAuthConfig["auth"] ? BearerAuthConfig
   : AuthType extends OAuth2Config["auth"] ? OAuth2Config
