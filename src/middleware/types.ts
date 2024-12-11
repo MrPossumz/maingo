@@ -1,4 +1,4 @@
-import type { StdRequestComponents } from "@/types.ts";
+import type { StdRequestComponents } from "../types.ts";
 
 export type RequestMapCallback = () => StdRequestComponents | Promise<StdRequestComponents>;
 export type ResponseMapCallback = () => Response | Promise<Response>;

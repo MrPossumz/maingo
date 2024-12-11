@@ -1,6 +1,6 @@
-import type { SearchParamsInit, Stringable } from "@/types.ts";
-import { Is } from "@/guards.ts";
-import { SearchParams } from "@/search-params.ts";
+import type { SearchParamsInit, Stringable } from "../types.ts";
+import { Is } from "../guards.ts";
+import { SearchParams } from "../search-params.ts";
 
 /** Convert any URL Search Param strings to URLSearchParams instance. */
 function stringToParams(params: Exclude<SearchParamsInit, undefined>) {

@@ -1,8 +1,8 @@
-import { createTypeGuard, Is } from "guardis";
-import type { Catalog } from "@/types.ts";
-import type { Client } from "@/client.ts";
-import { isConfig, type Config } from "@/config.ts";
-import type { RequestMap, ResponseMap } from "@/middleware/types.ts";
+import { createTypeGuard, Is } from "../../deps.ts";
+import type { Catalog } from "../types.ts";
+import type { Client } from "../client.ts";
+import { type Config, isConfig } from "../config.ts";
+import type { RequestMap, ResponseMap } from "../middleware/types.ts";
 import { AuthBase } from "./base.ts";
 
 export type OAuth2TokenRecord = {

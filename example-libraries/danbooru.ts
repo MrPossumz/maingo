@@ -1,5 +1,5 @@
-import Library from "@/library.ts";
 import type { ResponseJson } from "@/types.ts";
+import Library from "@/library.ts";
 
 type ImageData = {
   id: number;
@@ -71,52 +71,44 @@ type ImageData = {
   preview_file_url: string;
 };
 
-export class Danbooru extends Library {
-  public Config = {
-    connector: "REST" as const,
-    hostname: "https://danbooru.donmai.us",
-    auth: "none" as const,
-  };
-
-  public Catalog!: {
-    [x: `/posts/${number}.json`]: {
-      get: {
-        request: {};
-        response: ImageData;
-        errors: Record<string, never>;
-      };
-    };
-    "/posts.json": {
-      get: {
-        request: {
-          params: { tag_id?: string | number };
-        };
-        response: ImageData[];
-        errors: Record<string, never>;
-      };
-    };
-    /** Search tags */
-    "/tags.json": {
-      get: {
-        request: {
-          params: {
-            name_match?: string;
-            rating?: string;
-            tag_string?: string;
-          };
-        };
-        response: ResponseJson<{
-          id: number;
-          name: string;
-          post_count: number;
-          category: number;
-          created_at: string;
-          updated_at: string;
-          is_deperecated: boolean;
-          words: string[];
-        }[]>;
-        errors: Record<string, never>;
-      };
+export const Danbooru = Library<{
+  [x: `/posts/${number}.json`]: {
+    get: {
+      response: ImageData;
     };
   };
-}
+  "/posts.json": {
+    get: {
+      request: {
+        params: { tag_id?: string | number };
+      };
+      response: ImageData[];
+    };
+  };
+  /** Search tags */
+  "/tags.json": {
+    get: {
+      request: {
+        params: {
+          name_match?: string;
+          rating?: string;
+          tag_string?: string;
+        };
+      };
+      response: ResponseJson<{
+        id: number;
+        name: string;
+        post_count: number;
+        category: number;
+        created_at: string;
+        updated_at: string;
+        is_deperecated: boolean;
+        words: string[];
+      }[]>;
+    };
+  };
+}>()({
+  connector: "REST" as const,
+  hostname: "https://danbooru.donmai.us",
+  auth: "none" as const,
+});

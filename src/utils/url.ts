@@ -1,4 +1,4 @@
-import type { Stringable } from "@/types.ts";
+import type { Stringable } from "../types.ts";
 
 /**
  * Ensure that the API hostname ends with a trailing slash

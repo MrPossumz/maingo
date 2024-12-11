@@ -1,9 +1,9 @@
-import type { Catalog } from "@/types.ts";
-import {  isConfig } from "@/config.ts";
-import type { RequestMap } from "@/middleware/types.ts";
+import type { Catalog } from "../types.ts";
+import { isConfig } from "../config.ts";
+import type { RequestMap } from "../middleware/types.ts";
 import { AuthBase } from "./base.ts";
-import { createTypeGuard, Is } from "guardis";
-import type { AuthConfig } from "@/auth/types.ts";
+import type { AuthConfig } from "../auth/types.ts";
+import { createTypeGuard, Is } from "../../deps.ts";
 
 export interface BasicAuthConfig extends AuthConfig {
   auth: typeof BasicAuth["type"];

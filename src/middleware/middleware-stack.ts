@@ -7,8 +7,8 @@ import type {
   ResponseMap,
   ResponseMapCallback,
   ResponseTap,
-} from "@/middleware/types.ts";
-import type { StdRequestComponents } from "@/types.ts";
+} from "./types.ts";
+import type { StdRequestComponents } from "../types.ts";
 
 export default class MiddlewareStack {
   #requestTaps: Set<RequestTap> = new Set();

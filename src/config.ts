@@ -1,13 +1,13 @@
-import type { ConnectorType } from "@/connectors/types.ts";
-import type { Catalog } from "@/types.ts";
-import type { RestCatalog, RestConnectorConfig } from "@/connectors/rest.ts";
-import type { GraphqlCatalog, GraphqlConnectorConfig } from "@/connectors/graphql.ts";
-import { createTypeGuard, Is } from "guardis";
-import { type AuthType, isAuthType } from "@/auth/types.ts";
-import type { BasicAuthConfig } from "@/auth/basic.ts";
-import type { BearerAuthConfig } from "@/auth/bearer.ts";
-import type { OAuth2Config } from "@/auth/oauth2.ts";
-import type { NoAuthConfig } from "@/auth/no-auth.ts";
+import { createTypeGuard, Is } from "../deps.ts";
+import type { ConnectorType } from "./connectors/types.ts";
+import type { Catalog } from "./types.ts";
+import type { RestCatalog, RestConnectorConfig } from "./connectors/rest.ts";
+import type { GraphqlCatalog, GraphqlConnectorConfig } from "./connectors/graphql.ts";
+import { type AuthType, isAuthType } from "./auth/types.ts";
+import type { BasicAuthConfig } from "./auth/basic.ts";
+import type { BearerAuthConfig } from "./auth/bearer.ts";
+import type { OAuth2Config } from "./auth/oauth2.ts";
+import type { NoAuthConfig } from "./auth/no-auth.ts";
 
 export interface Config {
   /** The type of connector to use for all API calls. Currently
@@ -59,9 +59,9 @@ export type ConnectorConfigResolver<L extends Catalog> = L extends RestCatalog ?
   : L extends GraphqlCatalog ? GraphqlConnectorConfig
   : Config;
 
-export type AuthConfigResolver<C extends { auth?: AuthType }, AuthType = C["auth"]> = AuthType extends
-  BasicAuthConfig["auth"] ? BasicAuthConfig
-  : AuthType extends BearerAuthConfig["auth"] ? BearerAuthConfig
-  : AuthType extends OAuth2Config["auth"] ? OAuth2Config
-  : AuthType extends NoAuthConfig["auth"] ? NoAuthConfig
-  : never;
+export type AuthConfigResolver<C extends { auth?: AuthType }, AuthType = C["auth"]> =
+  AuthType extends BasicAuthConfig["auth"] ? BasicAuthConfig
+    : AuthType extends BearerAuthConfig["auth"] ? BearerAuthConfig
+    : AuthType extends OAuth2Config["auth"] ? OAuth2Config
+    : AuthType extends NoAuthConfig["auth"] ? NoAuthConfig
+    : never;

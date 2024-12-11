@@ -1,7 +1,8 @@
-import type { RestCatalog, RestMethodsInterface } from "@/connectors/rest.ts";
-import type { GraphqlCatalog, GraphqlMethodsInterface } from "@/connectors/graphql.ts";
-import type { ExcludeFromUnion } from "@/utils/types.ts";
-import type { SearchParams } from "@/search-params.ts";
+import type { ClientErrorStatus, ServerErrorStatus } from "jsr:@std/http";
+import type { RestCatalog, RestMethodsInterface } from "./connectors/rest.ts";
+import type { GraphqlCatalog, GraphqlMethodsInterface } from "./connectors/graphql.ts";
+import type { ExcludeFromUnion } from "./utils/types.ts";
+import type { SearchParams } from "./search-params.ts";
 
 /**	Matches a JSON object. */
 export type JsonObject =
@@ -135,7 +136,9 @@ export type Call = {
     | ResponseJson
     | ResponseText
     | unknown;
-  errors?: Record<string, string> | Record<string, never>;
+  errors?: {
+    [key in (ClientErrorStatus | ServerErrorStatus)]?: string | string[];
+  };
 };
 
 export type EndpointString = `/${string}`;

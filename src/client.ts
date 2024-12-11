@@ -1,12 +1,19 @@
-import type { Catalog, MethodInterfaceResolver } from "@/types.ts";
-import { type Config, type ConfigResolver } from "@/config.ts";
-import { type ConnectorResolver, createConnector } from "@/connectors/index.ts";
-import { type AuthResolver, createAuthAdapter } from "@/auth/index.ts";
-import MiddlewareStack from "@/middleware/middleware-stack.ts";
-import type { ConnectorBase } from "@/connectors/base.ts";
-import type { RestCatalog, RestConnectorConfig } from "@/connectors/rest.ts";
-import type { GraphqlCatalog, GraphqlConnectorConfig } from "@/connectors/graphql.ts";
+import type { Catalog, MethodInterfaceResolver } from "./types.ts";
+import type { Config, ConfigResolver } from "./config.ts";
+import type { ConnectorBase } from "./connectors/base.ts";
+import type { RestCatalog, RestConnectorConfig } from "./connectors/rest.ts";
+import type { GraphqlCatalog, GraphqlConnectorConfig } from "./connectors/graphql.ts";
+import { type ConnectorResolver, createConnector } from "./connectors/index.ts";
+import { type AuthResolver, createAuthAdapter } from "./auth/index.ts";
+import MiddlewareStack from "./middleware/middleware-stack.ts";
 
+/**
+ * An HTTP client used to perform API calls. Can be instantiated using
+ * a Library type to provide type hinting on endpoint calls.
+ *
+ * The client must be provided a config which controls client and
+ * authentication behavior.
+ */
 export class Client<
   L extends Catalog,
   C extends Config = ConfigResolver<L>,

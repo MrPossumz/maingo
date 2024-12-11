@@ -1,7 +1,7 @@
-import type { Catalog } from "@/types.ts";
-import type { Client } from "@/client.ts";
-import type { RequestMap, ResponseMap } from "@/middleware/types.ts";
-import type { AuthConfig } from "@/auth/types.ts";
+import type { Catalog } from "../types.ts";
+import type { Client } from "../client.ts";
+import type { RequestMap, ResponseMap } from "../middleware/types.ts";
+import type { AuthConfig } from "./types.ts";
 
 export abstract class AuthBase<L extends Catalog> {
   constructor(protected config: AuthConfig) {}

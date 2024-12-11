@@ -1,18 +1,9 @@
-import type {
-  Call,
-  EndpointString,
-  HTTPMethods,
-  Catalog,
-  RequestComponents,
-} from "@/types.ts";
-import { type Config, isConfig } from "@/config.ts";
-import { ConnectorBase } from "@/connectors/base.ts";
-import { createTypeGuard } from "guardis";
-import type {
-  RequestResolver,
-  ResponseResolver,
-} from "@/connectors/types.ts";
-import type { Client } from "@/client.ts";
+import type { Call, Catalog, EndpointString, HTTPMethods, RequestComponents } from "../types.ts";
+import { type Config, isConfig } from "../config.ts";
+import { ConnectorBase } from "./base.ts";
+import { createTypeGuard } from "../../deps.ts";
+import type { RequestResolver, ResponseResolver } from "./types.ts";
+import type { Client } from "../client.ts";
 
 /** A library specific for Rest APIs. */
 export interface RestCatalog extends Catalog {

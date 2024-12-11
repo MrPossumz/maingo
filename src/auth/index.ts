@@ -1,9 +1,9 @@
-import type { Config } from "@/config.ts";
-import NoAuth, { isNoAuthConfig, type NoAuthConfig } from "@/auth/no-auth.ts";
-import BasicAuth, { type BasicAuthConfig, isBasicAuthConfig } from "@/auth/basic.ts";
-import BearerAuth, { type BearerAuthConfig, isBearerAuthConfig } from "@/auth/bearer.ts";
-import OAuth2, { isOAuth2Config, type OAuth2Config } from "@/auth/oauth2.ts";
-import type { Catalog } from "@/types.ts";
+import type { Catalog } from "../types.ts";
+import type { Config } from "../config.ts";
+import NoAuth, { isNoAuthConfig, type NoAuthConfig } from "./no-auth.ts";
+import BasicAuth, { type BasicAuthConfig, isBasicAuthConfig } from "./basic.ts";
+import BearerAuth, { type BearerAuthConfig, isBearerAuthConfig } from "./bearer.ts";
+import OAuth2, { isOAuth2Config, type OAuth2Config } from "./oauth2.ts";
 
 export type AuthResolver<L extends Catalog, C extends Config> = C extends NoAuthConfig ? NoAuth<L>
   : C extends BasicAuthConfig ? BasicAuth<L>

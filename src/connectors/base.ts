@@ -5,12 +5,12 @@ import type {
   RequestHeaders,
   RequestParams,
   Stringable,
-} from "@/types.ts";
-import { formatSearchParamPHP, isValidUrl } from "@/utils/url.ts";
-import type MiddlewareStack from "@/middleware/middleware-stack.ts";
-import { Is } from "@/guards.ts";
-import type { Config } from "@/config.ts";
-import type { Client } from "@/client.ts";
+} from "../types.ts";
+import { formatSearchParamPHP, isValidUrl } from "../utils/url.ts";
+import type MiddlewareStack from "../middleware/middleware-stack.ts";
+import { Is } from "../guards.ts";
+import type { Config } from "../config.ts";
+import type { Client } from "../client.ts";
 
 export abstract class ConnectorBase<L extends Catalog> {
   /** The middleware stack */

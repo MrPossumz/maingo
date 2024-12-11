@@ -1,8 +1,8 @@
-import { createTypeGuard } from "guardis";
-import type { Catalog } from "@/types.ts";
+import { createTypeGuard } from "../../deps.ts";
+import type { Catalog } from "../types.ts";
 import { AuthBase } from "./base.ts";
-import type { RequestMap } from "@/middleware/types.ts";
-import type { AuthConfig } from "@/auth/types.ts";
+import type { RequestMap } from "../middleware/types.ts";
+import type { AuthConfig } from "./types.ts";
 
 export interface NoAuthConfig extends AuthConfig {
   auth: typeof NoAuth["type"];

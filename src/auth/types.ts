@@ -1,5 +1,5 @@
-import { createTypeGuard, Is } from "guardis";
-import type { Catalog } from "@/types.ts";
+import { createTypeGuard, Is } from "../../deps.ts";
+import type { Catalog } from "../types.ts";
 import NoAuth from "./no-auth.ts";
 import BasicAuth from "./basic.ts";
 import BearerAuth from "./bearer.ts";

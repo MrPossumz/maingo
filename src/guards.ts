@@ -1,4 +1,4 @@
-import { extend } from "guardis";
+import { extend } from "../deps.ts";
 
 export const Is = extend({
   Blob: (v) => v instanceof Blob ? v : null,

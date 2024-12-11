@@ -1,4 +1,4 @@
-import type { Stringable } from "@/types.ts";
+import type { Stringable } from "./types.ts";
 
 /** Intermediate class to allow type coercion when generating
  * URL Search Params. */
