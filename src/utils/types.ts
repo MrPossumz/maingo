@@ -1,6 +1,3 @@
-/** Used to exclude a subset of unions from a larger union. */
-export type ExcludeFromUnion<U, T> = T extends U ? never : T;
-
 /** Merges two record types. If a key exists in both types then the value from
  * the latter type is preferentially used. */
 export type Assign<A, B> = A extends Record<string | number | symbol, any>
@@ -12,3 +9,13 @@ export type Assign<A, B> = A extends Record<string | number | symbol, any>
     }
   : never
   : never;
+
+/** Creates a discriminated union by accepting a record of keys and record values.
+ * The key is used to discriminate the union and defaults to "type". */
+export type DiscriminatedUnion<T extends {}, P extends string = "type"> = {
+  [K in keyof T]: {
+    [L in keyof T[K] | P]: L extends keyof T[K] ? T[K][L]
+      : L extends P ? K
+      : never;
+  };
+}[keyof T];

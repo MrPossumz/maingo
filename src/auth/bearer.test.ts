@@ -1,28 +1,44 @@
-import type { Catalog } from "@/types.ts";
-import { assert, assertEquals } from "@std/assert";
-import BearerAuth from "./bearer.ts";
+import BearerAuth from "@/auth/bearer.ts";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 
-Deno.test("BearerAuth", async () => {
-  assertEquals(BearerAuth.type, "bearer");
+Deno.test("BearerAuth - should throw an error for invalid config", () => {
+  const invalidConfig = { token: 123 }; // Invalid token type
 
-  const auth = new BearerAuth<Catalog>({
-    auth: "bearer",
-    token: "123",
-  });
+  assertThrows(
+    () => new BearerAuth(invalidConfig as any),
+    Error,
+    "Invalid BearerAuthConfig provided",
+  );
+});
 
-  assert("getAuthentication" in auth);
+Deno.test("BearerAuth - getAuthentication should add Authorization header", async () => {
+  const validConfig = { token: "test-token" };
+  const auth = new BearerAuth(validConfig);
+  const middleware = auth.getAuthentication();
 
-  const authCallback = auth.getAuthentication();
+  const mockRequest = { headers: {} };
+  const mockNext = async (req: any) => req;
 
-  assertEquals(typeof authCallback, "function");
+  const result = await middleware(mockRequest, mockNext) as unknown as Request;
 
-  const mappedComponents = await authCallback(() => ({
-    body: {},
-    params: [],
-    headers: {},
-  }));
+  assert("headers" in result);
+  assert("authorization" in result.headers);
+  assertEquals(result.headers.authorization, `Bearer ${validConfig.token}`);
+});
 
-  assert("headers" in mappedComponents);
-  assert("Authorization" in mappedComponents.headers);
-  assertEquals(mappedComponents.headers.Authorization, `Bearer 123`);
+Deno.test("BearerAuth - getAuthentication should preserve existing headers", async () => {
+  const validConfig = { token: "test-token" };
+  const auth = new BearerAuth(validConfig);
+  const middleware = auth.getAuthentication();
+
+  const mockRequest = { headers: { "Content-Type": "application/json" } };
+  const mockNext = async (req: any) => req;
+
+  const result = await middleware(mockRequest, mockNext);
+
+  assert("headers" in result);
+  assert("authorization" in result.headers);
+  assertEquals(result.headers["authorization"], `Bearer ${validConfig.token}`);
+  assert("Content-Type" in result.headers);
+  assertEquals(result.headers["Content-Type"], "application/json");
 });

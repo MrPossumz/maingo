@@ -1,29 +1,36 @@
-import type { Catalog } from "@/types.ts";
-import { assert, assertEquals } from "@std/assert";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 import BasicAuth from "./basic.ts";
 
-Deno.test("BasicAuth", async () => {
-  assertEquals(BasicAuth.type, "basic");
+Deno.test("BasicAuth - should encode credentials correctly", () => {
+  const config = { id: "user", secret: "pass" };
+  const auth = new BasicAuth(config);
 
-  const auth = new BasicAuth<Catalog>({
-    auth: "basic",
-    userId: "1",
-    userPass: "2",
-  });
+  const expectedEncodedCredentials = btoa(`${config.id}:${config.secret}`);
 
-  assert("getAuthentication" in auth);
+  assertEquals(auth["encodedCredentials"], expectedEncodedCredentials);
+});
 
-  const authCallback = auth.getAuthentication();
+Deno.test("BasicAuth - getAuthentication should add Authorization header", async () => {
+  const config = { id: "user", secret: "pass" };
+  const auth = new BasicAuth(config);
+  const middleware = auth.getAuthentication();
 
-  assertEquals(typeof authCallback, "function");
+  const mockRequest = {};
+  const mockNext = async (req: any) => req;
 
-  const mappedComponents = await authCallback(() => ({
-    body: {},
-    params: [],
-    headers: {},
-  }));
+  const result = await middleware(mockRequest, mockNext);
 
-  assert("headers" in mappedComponents);
-  assert("Authorization" in mappedComponents.headers);
-  assertEquals(mappedComponents.headers.Authorization, `Basic ${btoa("1:2")}`);
+  assert("headers" in result);
+  assert("authorization" in result.headers);
+  assertEquals(result.headers.authorization, `Basic ${btoa(`${config.id}:${config.secret}`)}`);
+});
+
+Deno.test("BasicAuth - throws error on invalid config", () => {
+  const invalidConfig = { id: "user" }; // Missing 'secret'
+
+  assertThrows(
+    () => new BasicAuth(invalidConfig as any),
+    Error,
+    "Invalid BasicAuthConfig provided",
+  );
 });
