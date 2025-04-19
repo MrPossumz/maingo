@@ -1,18 +1,22 @@
-import { createTypeGuard, Is } from "../../deps.ts";
-import type { Catalog } from "../types.ts";
-import type { RequestMap } from "../middleware/types.ts";
-import { AuthBase } from "./base.ts";
-import type { AuthConfig } from "../auth/types.ts";
+import { createTypeGuard, Is } from "guardis";
+import { AuthBase, type AuthConfigBase } from "./base.ts";
+import type { Middleware } from "@/middleware-stack.ts";
 
-export interface BearerAuthConfig extends AuthConfig {
-  auth: typeof BearerAuth["type"];
+/**
+ * Configuration interface for Bearer token-based authentication.
+ * Extends the base authentication configuration.
+ *
+ * @extends AuthConfigBase
+ *
+ * @property {string} token - The Bearer token used for authentication.
+ */
+export interface BearerAuthConfig extends AuthConfigBase {
   token: string;
 }
 
 export const isBearerAuthConfig = createTypeGuard<BearerAuthConfig>((v, has) => {
   if (
     v && typeof v === "object" &&
-    has(v, "auth", (v) => v === "bearer") &&
     has(v, "token", Is.String)
   ) {
     return v;
@@ -21,21 +25,39 @@ export const isBearerAuthConfig = createTypeGuard<BearerAuthConfig>((v, has) => 
   return null;
 });
 
-export default class BearerAuth<L extends Catalog> extends AuthBase<L> {
-  declare protected config: BearerAuthConfig;
-
-  public static readonly type = "bearer";
-
+/**
+ * A class that implements Bearer token-based authentication.
+ * This class extends the `AuthBase` class and provides a mechanism
+ * to add a Bearer token to the `Authorization` header of outgoing requests.
+ *
+ * @example
+ * ```typescript
+ * const auth = new BearerAuth({ token: "your-bearer-token" });
+ * const middleware = auth.getAuthentication();
+ * ```
+ */
+export default class BearerAuth extends AuthBase<BearerAuthConfig> {
   constructor(config: BearerAuthConfig) {
     super(config);
+		
+    if (!isBearerAuthConfig(config)) {
+      throw new Error("Invalid BearerAuthConfig provided");
+    }
   }
 
-  override getAuthentication(): RequestMap {
-    return async (next) => {
-      const components = await next();
+  /**
+   * Overrides the `getAuthentication` method to provide a middleware
+   * that adds a Bearer token to the `Authorization` header of the request.
+   *
+   * @returns A middleware function that modifies the request headers
+   *          to include the Bearer token and then forwards the request.
+   */
+  override getAuthentication(): Middleware {
+    return async (req, next) => {
+      req.headers ??= {};
+      req.headers["authorization"] = `Bearer ${this.config.token}`;
 
-      components.headers["Authorization"] = `Bearer ${this.config.token}`;
-      return components;
+      return next(req);
     };
   }
 }

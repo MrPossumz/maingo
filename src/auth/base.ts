@@ -1,24 +1,16 @@
-import type { Catalog } from "../types.ts";
-import type { Client } from "../client.ts";
-import type { RequestMap, ResponseMap } from "../middleware/types.ts";
-import type { AuthConfig } from "./types.ts";
+import type { Client } from "@/client.ts";
+import type { Middleware } from "@/middleware-stack.ts";
+import type { AuthMethods } from "./index.ts";
 
-export abstract class AuthBase<L extends Catalog> {
-  constructor(protected config: AuthConfig) {}
+export interface AuthConfigBase {}
+
+export abstract class AuthBase<C extends AuthConfigBase> implements AuthMethods {
+  constructor(protected readonly config: C) {}
 
   /**
    * A callback used to patch in whatever authentication logic
    * is necessary for this auth type.
    * @returns
    */
-  abstract getAuthentication(client: Client<L>): RequestMap;
-
-  /**
-   * A callback that will be inserted into the middleware
-   * stack and used to check authentication after every API call.
-   * @returns
-   */
-  checkAuthentication(_client: Client<L>): ResponseMap {
-    return (next) => next();
-  }
+  abstract getAuthentication(client: Client): Middleware;
 }

@@ -1,62 +1,107 @@
+import { mockFetch } from "@/utils/testing.ts";
 import { Client, createClient } from "./client.ts";
+import { assertEquals } from "@std/assert/equals";
+import type { Middleware } from "@/middleware-stack.ts";
 import { assert } from "@std/assert";
-import type { ResponseJson, ResponseText } from "@/types.ts";
+import { RestConnector } from "@/connectors/rest.ts";
+import { GraphqlConnector } from "@/connectors/graphql.ts";
 
-type TestLib = {
-  "/auth/login": {
-    post: {
-      request: {
-        params: { "test": "true" };
-        body: FormData;
-        headers: [];
-      };
-      response: ResponseJson<{ a: "test" }>;
-      errors: Record<string, never>;
-    };
-  };
-  "/organizations/tracks": {
-    post: {
-      request: {
-        // headers: { 'content-type': 'application/json' };
-        body: { name: string; num: number };
-      };
-      response: ResponseJson<{ test: true }>;
-      errors: Record<string, never>;
-    };
-    get: {
-      request: { params: { name: string }; headers: { "x-user-id": string } };
-      response: ResponseText<`Some text: ${string}`>;
-      errors: Record<string, never>;
-    };
-    put: {
-      response: ResponseText<"Test">;
-      errors: Record<string, never>;
-    };
-  };
-};
-
-Deno.test("createClient", async (t) => {
-  await t.step("instantiates Client with Library", () => {
-    const client = createClient<TestLib>()({
-      connector: "REST",
-      hostname: "http://www.test.com",
-      auth: "basic",
-      userId: "test",
-      userPass: "word",
-    });
-
-    assert(client instanceof Client);
+Deno.test("Client initializes with default config values", () => {
+  const client = createClient({
+    connector: "rest",
+    headers: { "Content-Type": "application/json" },
+    hostname: "https://api.example.com",
   });
 
-  await t.step("instantiates Client without Library", () => {
-    const client = createClient({
-      connector: "REST",
-      hostname: "http://www.test.com",
-      auth: "basic",
-      userId: "test",
-      userPass: "word",
-    });
-
-    assert(client instanceof Client);
-  });
+  assertEquals(client.middleware.length, 0);
+  assertEquals(client.hasMiddleware("auth"), false);
 });
+
+Deno.test("Client initializes with custom auth config", () => {
+  const client = createClient({
+    connector: "rest",
+    headers: { "Content-Type": "application/json" },
+    hostname: "https://api.example.com",
+    auth: { type: "basic", id: "user", secret: "pass" },
+  });
+
+  assertEquals(client.middleware.length, 0);
+  assert(client.hasMiddleware("auth"));
+});
+
+Deno.test("Client adds and retrieves middleware", () => {
+  const client = createClient({
+    connector: "rest",
+    headers: { "Content-Type": "application/json" },
+    hostname: "https://api.example.com",
+  });
+
+  const middleware: Middleware = (req, next) => next(req);
+  const key = client.useMiddleware(middleware, "testMiddleware");
+
+  assert(client.hasMiddleware("testMiddleware"));
+  assertEquals(client.getMiddleware("testMiddleware"), middleware);
+
+  client.removeMiddleware(key);
+  assertEquals(client.hasMiddleware("testMiddleware"), false);
+});
+
+Deno.test("createClient initializes a REST client", () => {
+  const client = createClient({
+    connector: "rest",
+    headers: { "Content-Type": "application/json" },
+    hostname: "https://api.example.com",
+  });
+
+  assert(client instanceof Client);
+  assert(client["connector"] instanceof RestConnector);
+});
+
+Deno.test("createClient initializes a GraphQL client", () => {
+  const client = createClient({
+    connector: "graphql",
+    endpoint: undefined,
+    hostname: "https://api.example.com/graphql",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  assert(client instanceof Client);
+  assert(client["connector"] instanceof GraphqlConnector);
+});
+
+// Deno.test("Client init sets up auth middleware", async () => {
+//   const client = new Client({
+//     connector: "rest",
+//     auth: { type: "apiKey", key: "test-key" },
+//   });
+
+//   await client.init();
+
+//   assertEquals(client.middleware.length, 1);
+//   assertEquals(client.hasMiddleware("auth"), true);
+// });
+
+// Deno.test("Client throws error for unsupported connector", () => {
+//   assertThrows(
+//     () => {
+//       createClient({
+//         connector: "unsupported" as any,
+//       });
+//     },
+//     Error,
+//     "Unsupported connector type",
+//   );
+// });
+
+// Deno.test("Client handles fetch requests with middleware", async () => {
+//   mockFetch((req) => {
+//     return new Response(JSON.stringify({ success: true }), { status: 200 });
+//   });
+
+//   const client = new Client({
+//     connector: "rest",
+//   });
+
+//   const response = await client.init();
+//   assertEquals(response, undefined); // Assuming init doesn't return anything
+// });

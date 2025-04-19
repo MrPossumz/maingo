@@ -1,157 +1,97 @@
-import type { Catalog, MethodInterfaceResolver } from "./types.ts";
-import type { Config, ConfigResolver } from "./config.ts";
-import type { ConnectorBase } from "./connectors/base.ts";
-import type { RestCatalog, RestConnectorConfig } from "./connectors/rest.ts";
-import type { GraphqlCatalog, GraphqlConnectorConfig } from "./connectors/graphql.ts";
-import { type ConnectorResolver, createConnector } from "./connectors/index.ts";
-import { type AuthResolver, createAuthAdapter } from "./auth/index.ts";
-import MiddlewareStack from "./middleware/middleware-stack.ts";
+import { type ConnectorConfig, getConnector } from "@/connectors/index.ts";
+import type { MaingoRestConnector } from "@/connectors/rest.ts";
+import type { MaingoGraphqlConnector } from "@/connectors/graphql.ts";
+import { type AuthConfig, type AuthMethods, getAuth } from "@/auth/index.ts";
+import {
+  type Middleware,
+  MiddlewareStack,
+  type MiddlewareStackInterface,
+} from "@/middleware-stack.ts";
 
-/**
- * An HTTP client used to perform API calls. Can be instantiated using
- * a Library type to provide type hinting on endpoint calls.
- *
- * The client must be provided a config which controls client and
- * authentication behavior.
- */
-export class Client<
-  L extends Catalog,
-  C extends Config = ConfigResolver<L>,
-> {
-  #config: C;
-  #auth: AuthResolver<L, C>;
-  #connector: ConnectorResolver<L, C>;
+export type ClientConfig = ConnectorConfig & {
+  /** The authentication method used by the API. */
+  auth?: AuthConfig;
+  /** The optional search param format configuration. This defaults to "delimited"
+   * which is the web standard. The "indexed" format is used by some services, such
+   * as those running on PHP. */
+  searchParamFormat?: "delimited" | "indexed";
+};
 
-  constructor(config: C) {
-    config.auth ??= "none";
-    config.searchParamFormat ??= "delimited";
+export class Client {
+  private connector: MaingoRestConnector | MaingoGraphqlConnector;
+  private auth: AuthMethods | undefined;
+  private middlewareStack = new MiddlewareStack();
 
-    this.#config = Object.freeze(config);
+  constructor(private readonly config: ClientConfig) {
+    this.config.auth ??= { type: "none" };
+    this.config.searchParamFormat ??= "delimited";
 
-    this.#auth = this.#buildAuthAdapter();
-    this.#connector = this.#buildConnectorAdapter();
-
-    const middleware = new MiddlewareStack();
-    this.#connector.middleware = middleware;
-
-    this.tap = middleware.tap.bind(middleware);
-    this.pushMiddleware = middleware.push.bind(middleware);
-    this.setHeader = this.#connector.setHeader.bind(this.#connector);
+    this.auth = getAuth(this.config?.auth);
+    this.connector = getConnector(this.config, () => this.middleware);
   }
 
-  /** Creates an auth adapter from the instance config object. */
-  #buildAuthAdapter() {
-    const auth = createAuthAdapter(this.#config);
+  /** Retrieve the currently active middleware for the client. */
+  public middleware: Middleware[] = this.middlewareStack.middleware;
 
-    if (!auth) {
-      throw Error("Failed to generate an auth adapter from the provided config.");
+  /**
+   * Check if the given name exists in the client middleware stack.
+   * @param name
+   * @returns
+   */
+  public hasMiddleware: MiddlewareStackInterface["has"] = this.middlewareStack
+    .has.bind(this.middlewareStack);
+  /**
+   * Retrieve a middleware from the client middleware stack, by name.
+   * @param name
+   * @returns
+   */
+  public getMiddleware: MiddlewareStackInterface["get"] = this.middlewareStack
+    .get.bind(this.middlewareStack);
+  /**
+   * Adds middleware to the client middleware stack. The method returns
+   * a symbol which can be used to remove the middleware.
+   * @param middleware
+   * @param name
+   */
+  public useMiddleware: MiddlewareStackInterface["use"] = this.middlewareStack
+    .use.bind(this.middlewareStack);
+  /**
+   * Removes middleware from the client middleware stack.
+   * @param key
+   */
+  public removeMiddleware: MiddlewareStackInterface["remove"] = this.middlewareStack
+    .remove.bind(this.middlewareStack);
+
+  /**
+   * Initializes the client by setting up authentication middleware (if available)
+   * and delegating the initialization process to the connector.
+   * @returns
+   */
+  public init() {
+    const authMiddleware = this.auth?.getAuthentication(this);
+
+    if (authMiddleware) {
+      this.middlewareStack.use(authMiddleware, 'auth');
     }
 
-    return auth as AuthResolver<L, C>;
-  }
-
-  /** Create a connector adapter from the instance config object. */
-  #buildConnectorAdapter() {
-    const connector = createConnector(this.#config);
-
-    if (!connector) {
-      throw Error("Failed to generate a connector from the provided config.");
-    }
-
-    return connector as ConnectorResolver<L, C>;
-  }
-
-  /**
-   * Returns a readonly copy of the config object used to create the client.
-   * @returns {object}
-   */
-  get config(): Readonly<C> {
-    return this.#config;
-  }
-
-  /**
-   * Returns a reference to the auth adapter generated from the configuration
-   * object.
-   * @returns {object}
-   */
-  get auth(): AuthResolver<L, C> {
-    return this.#auth;
-  }
-
-  /**
-   * Returns a reference to the connector adapter generated from the
-   * configuration object.
-   * @returns {object}
-   */
-  get connector() {
-    return this.#connector;
-  }
-
-  /**
-   * Tap into the middleware stack using callbacks. The callback will
-   * receive a cloned copy of the response and/or request. Changes made
-   * to the request will not carry over to the API call or persist in
-   * the final returned response.
-   *
-   * Taps are invoked in the order they are added, from the outermost
-   * going inward.
-   *
-   * Requests and Responses are passed to taps after the middleware has
-   * been applied.
-   * @param {function} tap
-   * @returns {function}
-   */
-  public tap: MiddlewareStack["tap"];
-
-  /**
-   * Push a mapping callback into the stack. Callbacks may map
-   * either the request or response objects of the api call.
-   *
-   * Maps are invoked in the order they are added, from the outermost
-   * going inward.
-   * @param {string} type
-   * @param {function} fn
-   * @returns {function}
-   */
-  public pushMiddleware: MiddlewareStack["push"];
-
-  /**
-   * Update a single header. These values will carry over with each api
-   * call.
-   * @param {string} name
-   * @param {string} value
-   */
-  public setHeader: ConnectorBase<L>["setHeader"];
-
-  /**
-   * Defines the headers on the connector. These will carry over between
-   * api calls. Overrides any existing headers that have been defined
-   * in this way.
-   * @param {object} headers
-   */
-  public setHeaders(headers: Record<string, string>) {
-    this.#connector.headers = headers;
-  }
-
-  _initialize(): this & MethodInterfaceResolver<L> {
-    return this.#connector.initializeClient(this) as this & MethodInterfaceResolver<L>;
+    return this.connector.init(this);
   }
 }
 
-type LibraryResolver<C extends Config> = C extends RestConnectorConfig ? RestCatalog
-  : C extends GraphqlConnectorConfig ? GraphqlCatalog
-  : Catalog;
-
-export type ClientInstance<L extends Catalog, C extends Config> =
-  & Client<L, C>
-  & MethodInterfaceResolver<L>;
-
-export function createClient<L extends Catalog, C extends Config = ConfigResolver<L>>(): <
-  C extends ConfigResolver<L>,
->(config: C) => ClientInstance<L, C>;
-export function createClient<C extends Config>(config: C): ClientInstance<LibraryResolver<C>, C>;
-export function createClient<L extends Catalog, C extends Config = ConfigResolver<L>>(config?: C) {
-  if (config) return new Client<L, C>(config)._initialize();
-
-  return <C extends ConfigResolver<L>>(config: C) => new Client<L, C>(config)._initialize();
+export function createClient<
+  C extends ClientConfig,
+  ConnectorType extends "rest" & Extract<C["connector"], "rest">,
+>(
+  config: C,
+): Client & MaingoRestConnector;
+export function createClient<
+  C extends ClientConfig,
+  ConnectorType extends "graphql" & Extract<C["connector"], "graphql">,
+>(
+  config: C,
+): Client & MaingoGraphqlConnector;
+export function createClient<C extends ClientConfig>(
+  config: C,
+): Client {
+  return new Client(config).init();
 }

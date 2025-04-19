@@ -1,166 +1,75 @@
-import type { RequestComponents, ResponseJson, ResponseText } from "@/types.ts";
+import { mockFetch } from "@/utils/testing.ts";
+import { RestConnector } from "./rest.ts";
 import { assert, assertEquals } from "@std/assert";
-import { expectTypeOf } from "expect-type";
-import { Client, createClient } from "@/client.ts";
-import { REST } from "./rest.ts";
 
-type RestLib = {
-  "/auth/login": {
-    post: {
-      request: {
-        params: { "test": "true" };
-        body: FormData;
-        headers: [];
-      };
-      response: ResponseJson<{ a: "test" }>;
-      errors: Record<string, never>;
-    };
-  };
-  "/organizations/tracks": {
-    post: {
-      request: {
-        headers: { "content-type": "application/json" };
-        body: { name: string; num: number };
-      };
-      response: ResponseJson<{ test: true }>;
-      errors: Record<string, never>;
-    };
-    get: {
-      request: { params: { name: string }; headers: { "x-user-id": string } };
-      response: ResponseText<`Some text: ${string}`>;
-      errors: Record<string, never>;
-    };
-    put: {
-      // request: Record<string | number | symbol, never>,
-      response: ResponseText<"Test">;
-      errors: Record<string, never>;
-    };
-  };
-};
+const methods = [
+  "post",
+  "put",
+  "patch",
+  "delete",
+  "options",
+  "head",
+  "get",
+] as const;
 
-Deno.test("REST", async (t) => {
-  assertEquals(REST.type, "REST");
+Deno.test("RestConnector - binds methods to the client", async (t) => {
+  const connector = new RestConnector({
+    hostname: "https://api.example.com",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  }, () => []);
 
-  await t.step("is resolved by client", () => {
-    const client = createClient<RestLib>()({
-      connector: "REST",
-      hostname: "http://www.test.com",
-      auth: "basic",
-      userId: "test",
-      userPass: "word",
-    });
+  const client = {} as any;
+  const initializedClient = connector.init(client);
 
-    assert(client instanceof Client);
-    assert(client.connector instanceof REST);
+  for (const method of methods) {
+    assert(typeof initializedClient[method] === "function");
+    assert(initializedClient[method] !== connector[method]);
+  }
+});
+
+Deno.test("RestConnector - methods", async (t) => {
+  const connector = new RestConnector({
+    hostname: "https://api.example.com",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  }, () => []);
+
+  await t.step("passes correct HTTP methods", async () => {
+    for (const method of methods) {
+      const stubObj = mockFetch((req) => {
+        assertEquals(req?.method?.toLowerCase(), method);
+        return Promise.resolve(new Response(`Mocked response for ${method}`));
+      });
+
+      await connector[method]({
+        endpoint: "/test",
+        headers: {},
+        body: null,
+        params: {},
+      });
+
+      stubObj.restore();
+    }
   });
 
-  await t.step("binds methods to client", () => {
-    const client = createClient<RestLib>()({
-      connector: "REST",
-      hostname: "http://www.test.com",
-      auth: "basic",
-      userId: "test",
-      userPass: "word",
+  await t.step("ignores passed in method", async () => {
+    const stubObj = mockFetch((req) => {
+      assertEquals(req?.method?.toLowerCase(), "get");
+      return Promise.resolve(new Response("Mocked response for get"));
     });
 
-    assert("head" in client);
-    assert("head" in client.connector);
-    assert("get" in client);
-    assert("get" in client.connector);
-    assert("post" in client);
-    assert("post" in client.connector);
-    assert("patch" in client);
-    assert("patch" in client.connector);
-    assert("put" in client);
-    assert("put" in client.connector);
-    assert("delete" in client);
-    assert("delete" in client.connector);
-    assert("options" in client);
-    assert("options" in client.connector);
-
-    expectTypeOf<typeof client.head>().toMatchTypeOf<typeof client.connector.head>();
-    expectTypeOf<typeof client.get>().toMatchTypeOf<typeof client.connector.get>();
-    expectTypeOf<typeof client.post>().toMatchTypeOf<typeof client.connector.post>();
-    expectTypeOf<typeof client.patch>().toMatchTypeOf<typeof client.connector.patch>();
-    expectTypeOf<typeof client.put>().toMatchTypeOf<typeof client.connector.put>();
-    expectTypeOf<typeof client.delete>().toMatchTypeOf<typeof client.connector.delete>();
-    expectTypeOf<typeof client.options>().toMatchTypeOf<typeof client.connector.options>();
-  });
-
-  await t.step("restricts defined endpoints", () => {
-    const client = createClient<RestLib>()({
-      connector: "REST",
-      hostname: "http://www.test.com",
-      auth: "basic",
-      userId: "test",
-      userPass: "word",
+    await connector.get({
+      endpoint: "/test",
+      headers: {},
+      body: null,
+      params: {},
+      //@ts-expect-error
+      method: "post",
     });
 
-    expectTypeOf<typeof client.post<"/auth/login">>().parameters.toEqualTypeOf<
-      [
-        "/auth/login",
-        RestLib["/auth/login"]["post"]["request"]["body"],
-        RestLib["/auth/login"]["post"]["request"]["params"],
-        RestLib["/auth/login"]["post"]["request"]["headers"],
-      ]
-    >();
-
-    expectTypeOf<typeof client.post<"/organizations/tracks">>().parameters.toEqualTypeOf<
-      [
-        "/organizations/tracks",
-        RestLib["/organizations/tracks"]["post"]["request"]["body"],
-        undefined,
-        RestLib["/organizations/tracks"]["post"]["request"]["headers"],
-      ]
-    >();
-
-    expectTypeOf<typeof client.get<"/organizations/tracks">>().parameters.toEqualTypeOf<
-      [
-        "/organizations/tracks",
-        RestLib["/organizations/tracks"]["get"]["request"]["params"],
-        RestLib["/organizations/tracks"]["get"]["request"]["headers"],
-      ]
-    >();
-
-    expectTypeOf<typeof client.put<"/organizations/tracks">>().parameters.toEqualTypeOf<
-      ["/organizations/tracks", body?: undefined, params?: undefined, headers?: undefined]
-    >();
-  });
-
-  await t.step("does not restrict undefined endpoints", () => {
-    const client = createClient<RestLib>()({
-      connector: "REST",
-      hostname: "http://www.test.com",
-      auth: "basic",
-      userId: "test",
-      userPass: "word",
-    });
-
-    expectTypeOf(client.post).parameter(1).toMatchTypeOf<
-      RequestComponents["body"] | undefined
-    >();
-    expectTypeOf(client.post).parameter(2).toMatchTypeOf<
-      RequestComponents["params"] | undefined
-    >();
-    expectTypeOf(client.post).parameter(3).toMatchTypeOf<
-      RequestComponents["headers"] | undefined
-    >();
-
-		expectTypeOf(client.put).parameter(1).toMatchTypeOf<
-		RequestComponents["body"] | undefined
-	>();
-	expectTypeOf(client.put).parameter(2).toMatchTypeOf<
-		RequestComponents["params"] | undefined
-	>();
-	expectTypeOf(client.put).parameter(3).toMatchTypeOf<
-		RequestComponents["headers"] | undefined
-	>();
-
-    expectTypeOf(client.get).parameter(1).toMatchTypeOf<
-      RequestComponents["params"] | undefined
-    >();
-    expectTypeOf(client.get).parameter(2).toMatchTypeOf<
-      RequestComponents["headers"] | undefined
-    >();
+    stubObj.restore();
   });
 });

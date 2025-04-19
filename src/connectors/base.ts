@@ -1,78 +1,77 @@
-import type {
-  Catalog,
-  HTTPMethods,
-  RequestBody,
-  RequestHeaders,
-  RequestParams,
-  Stringable,
-} from "../types.ts";
-import { formatSearchParamPHP, isValidUrl } from "../utils/url.ts";
-import type MiddlewareStack from "../middleware/middleware-stack.ts";
-import { Is } from "../guards.ts";
-import type { Config } from "../config.ts";
-import type { Client } from "../client.ts";
+import type { MaingoRequest, MaingoResponse, RequestHeaders, Stringable } from "../types.ts";
+import type { Middleware } from "@/middleware-stack.ts";
+import type { Client, ClientConfig } from "@/client.ts";
+import { appendParamsDelimited, appendParamsIndexed } from "@/utils/url-search-params.ts";
+import { Is } from "@/guards.ts";
+import type { ConnectorConfigBase } from "@/connectors/index.ts";
 
-export abstract class ConnectorBase<L extends Catalog> {
-  /** The middleware stack */
-  #middleware!: MiddlewareStack;
+export type MaingoConnector<
+  Req extends MaingoRequest = MaingoRequest,
+  Res extends MaingoResponse = MaingoResponse,
+> = {
+  /** The request type accepted by this connector. Some connectors may
+   * narrow the type of request they accept. */
+  REQUEST_TYPE: Req;
+  /** The response type returned by this connector. Some connectors may
+   * narrow the type of response they return. */
+  RESPONSE_TYPE: Res;
+  /**
+   * Update a single header. These values will carry over with each api
+   * call.
+   * @param {string} name
+   * @param {string} value
+   * {@link ConnectorBase.setHeader}
+   */
+  setHeader(name: string, value: string | Stringable): void;
+  /**
+   * Remove a single header. This also searches any temporary headers
+   * that may have been set for the current request and removes them if
+   * a match is found.
+   * @param {string} name
+   * {@link ConnectorBase.removeHeader}
+   */
+  removeHeader(name: string): void;
+};
 
+export type ConnectorCall = (request: MaingoRequest) => Promise<MaingoResponse>;
+
+export class ConnectorBase<C extends Partial<ClientConfig> & ConnectorConfigBase>
+  implements MaingoConnector {
   /** Set by the service. */
-  #headers: Record<string, string> = {};
-  /** Reset between calls. */
-  #tempHeaders: Record<string, string> = {};
+  #headers: Headers = new Headers();
   /** Hard coded permanent headers. */
-  #permanentHeaders: Record<string, string> = {};
+  #permanentHeaders = new Headers();
 
   /** Temporary hostname. This is reset after each call. */
   #tempHostname?: string | undefined;
 
   /** Used for debugging, logging and middleware. */
   #lastRequest?: Request;
+
   /** Used for debugging, logging and middleware. */
   #lastResponse?: Response;
 
-  constructor(protected config: Config) {}
+  constructor(protected readonly config: C, private getMiddleware: () => Middleware[]) {}
 
-  /** Assigns the connector methods to the client so that users don't have to use
-   * `client.connector` to perform a call. You can simply call `client.post` or
-   * `client.query`. */
-  public abstract initializeClient<T extends Client<L, C>, C extends Config>(client: T): T;
-
-  /**
-   * Retrieve the instance of the middleware stack.
-   * @returns {object}
-   */
-  public get middleware() {
-    return this.#middleware;
-  }
-
-  /**
-   * Set the middleware stack on the connector.
-   * @param {object}
-   */
-  public set middleware(middleware: MiddlewareStack) {
-    this.#middleware = middleware;
-  }
+  public REQUEST_TYPE!: MaingoRequest;
+  public RESPONSE_TYPE!: MaingoResponse;
 
   /**
    * Retrieve the headers for the next call. This includes any headers
-   * defined on instantiation of the client, permanent headers and temporary
-   * headers the exist for individual calls.
+   * defined manually after instantiation of the client or permanent headers.
+   * It does not include any temporary headers that may have been set
+   * for the current request.
    */
-  public get headers() {
-    return {
-      ...this.#headers,
-      ...this.#tempHeaders,
-      ...this.#permanentHeaders,
-    };
+  public get headers(): Headers {
+    return new Headers([...this.#headers.entries(), ...this.#permanentHeaders.entries()]);
   }
 
   /**
    * Set headers on the connector. These will carry over after each call.
    * @param {object}
    */
-  public set headers(headers: Record<string, string>) {
-    this.#headers = headers;
+  public set headers(headers: HeadersInit) {
+    this.#headers = new Headers(headers);
   }
 
   /**
@@ -92,203 +91,197 @@ export abstract class ConnectorBase<L extends Catalog> {
   }
 
   /**
+   * Initialize the connector. This method is not implemented in the base class
+   * and should be overridden in subclasses.
+   *
+   * It assigns the connector methods to the client/
+   */
+  public init(client: Client): Client & MaingoConnector {
+    throw Error("Initialize method not implemented for connector");
+  }
+
+  /**
    * Update a single header. These values will carry over with each api
    * call.
    * @param {string} name
    * @param {string} value
+   * {@link MaingoConnector.setHeader}
    */
   public setHeader(name: string, value: string | Stringable) {
     const _value = typeof value === "string" ? value : value.toString();
 
-    this.#headers[name] = _value;
+    this.#headers.set(name, _value);
   }
 
   /**
-   * Appends the formatted search param to the URL
-   * @param {string} key
-   * @param {string} value
-   * @param {URL} url
+   * Remove a single header. This also searches any temporary headers
+   * that may have been set for the current request and removes them if
+   * a match is found.
+   * @param name
+   * {@link MaingoConnector.removeHeader}
    */
-  protected formatSearchParam(
-    key: string,
-    value: string | Stringable,
-    url: URL,
-  ) {
-    switch (this.config.searchParamFormat) {
-      case "delimited":
-        url.searchParams.append(key, value.toString());
-        break;
-
-      case "php":
-        formatSearchParamPHP(key, value, url);
-        break;
+  public removeHeader(name: string): void {
+    if (this.#headers.has(name)) {
+      this.#headers.delete(name);
     }
   }
 
   /**
-   * Combines the base and endpoint to create a URL. Appends
-   * the URL search params if any are provided.
-   * @param {string} endpoint
-   * @param {object} params
-   * @returns {URL}
+   * Trims leading and trailing slashes from the given endpoint string.
+   *
+   * @param endpoint - The endpoint string to be trimmed.
+   * @returns The trimmed endpoint string without leading or trailing slashes.
    */
-  protected buildUrl(
-    endpoint: string,
-    params: RequestParams = {},
-  ) {
-    const url = new URL(endpoint, this.#tempHostname ?? this.config.hostname);
-
-    if (!isValidUrl(url.toString())) {
-      throw new Error(`Invalid URL: ${url.toString()}`);
+  private trimEndpoint(endpoint: string): string {
+    if (endpoint.charAt(0) === "/") {
+      endpoint = endpoint.substring(1);
     }
+
+    if (endpoint.charAt(endpoint.length - 1) === "/") {
+      endpoint = endpoint.substring(0, endpoint.length - 1);
+    }
+
+    return endpoint;
+  }
+
+  /**
+   * Constructs a URL by combining the provided endpoint with the configured hostname
+   * and optionally appending query parameters based on the specified format.
+   *
+   * @param endpoint - The endpoint path to append to the hostname. Defaults to an empty string.
+   * @param params - Optional query parameters to append to the URL. The format of these
+   *                 parameters depends on the `searchParamFormat` configuration.
+   *                 - "delimited": Appends parameters in a delimited format.
+   *                 - "indexed": Appends parameters in an indexed format.
+   *
+   * @returns A `URL` object representing the constructed URL.
+   */
+  protected buildUrl(endpoint = "", params?: MaingoRequest["params"]): URL {
+    const _endpoint = this.trimEndpoint(endpoint);
+    const _hostname = this.#tempHostname ?? this.config.hostname;
+
+    const url = new URL(_endpoint, _hostname);
 
     if (params) {
-      for (const [key, value] of Object.entries(params)) {
-        if (!key?.toString) {
-          throw new Error(
-            `Invalid URL Search Param key type. Found: "${typeof key}"`,
-          );
-        }
+      switch (this.config?.searchParamFormat) {
+        case "delimited":
+          appendParamsDelimited(url, params);
+          break;
 
-        if (!value?.toString) {
-          throw new Error(
-            `Invalid URL Search Param value type. Found: "${typeof value}"`,
-          );
-        }
-
-        this.formatSearchParam(key, value, url);
+        case "indexed":
+          appendParamsIndexed(url, params);
+          break;
       }
     }
 
     return url;
   }
 
+	/**
+	 * Combines temporary headers, main headers, and permanent headers into a single `Headers` object.
+	 *
+	 * @param tempHeaders - Optional temporary headers to be merged with the main and permanent headers.
+	 * @returns A new `Headers` object containing the merged headers.
+	 */
+  protected getHeaders(tempHeaders?: RequestHeaders) {
+    const _tempHeaders = new Headers(tempHeaders);
+
+    // merge temp headers with the main headers
+    return new Headers([
+      ...this.#headers.entries(),
+      ..._tempHeaders.entries(),
+      ...this.#permanentHeaders.entries(),
+    ]);
+  }
+
   /**
-   * Forces the body to be compatible with the Fetch API's
-   * BodyInit type.
-   * @param body
-   * @returns
+   * Constructs the request body for an HTTP request.
+   *
+   * @param body - The body of the request, which can be a JSON object, JSON array, or other types.
+   *
+   * @returns A `BodyInit` object if the body is a JSON object or array, or the original body if 
+	 * 					it is of another type. Returns `undefined` if the input body is `null` or `undefined`.
    */
-  protected buildBody(body: RequestBody): BodyInit | null {
+  protected buildBody(body: MaingoRequest["body"]): BodyInit | undefined {
+    if (!body) return undefined;
+
     if (Is.JsonArray(body) || Is.JsonObject(body)) {
       return JSON.stringify(body);
     }
 
-    return body ?? null;
+    return body ?? undefined;
   }
 
   /**
-   * Logic applied before every request.
-   * @param {string} method - The HTTP Method to use
-   * @param {string} endpoint - The endpoint to target
-   * @param {string|object|array|undefined} body - The body to send
-   * @param {object|undefined} params - The query parameters to send
-   * @param {object|array|undefined} headers - Any temporary headers to include
-   * @returns {void}
+   * Prepares and processes a request before it is sent.
+   *
+   * This method sets up the necessary headers, constructs the request object,
+   * and stores it as the last request for potential reuse or debugging purposes.
+   * It also clones the request to ensure immutability when returning it.
+   *
+   * @param request - The `MaingoRequest` object containing the details of the request,
+   * including the endpoint, parameters, headers, method, and body.
+   *
+   * @returns A cloned `Request` object that is ready to be sent.
    */
-  protected async preRequest(
-    method: HTTPMethods,
-    endpoint: string,
-    body?: RequestBody,
-    params?: RequestParams,
-    headers?: HeadersInit,
-  ) {
-    // Standardize the endpoint
-    if (endpoint.charAt(0) === "/") endpoint = endpoint.substring(1);
+  protected preRequest(request: MaingoRequest): Request {
+    this.#lastRequest = new Request(
+      this.buildUrl(request.endpoint, request.params),
+      {
+        method: request.method?.toLowerCase() ?? "get",
+        headers: this.getHeaders(request.headers),
+        body: this.buildBody(request.body),
+      },
+    );
 
-    // Set temporary headers
-    if (headers) {
-      const tempHeaders = new Headers(headers);
-
-      this.#tempHeaders = Object.fromEntries(tempHeaders.entries());
-    } else {
-      this.#tempHeaders = {};
-    }
-
-    body ??= null;
-
-    // Apply request map.
-    const components = await this.#middleware.applyRequestMap({
-      body,
-      params,
-      headers: this.headers,
-    });
-
-    this.#lastRequest = new Request(this.buildUrl(endpoint, components.params), {
-      method,
-      headers: components.headers,
-      body: this.buildBody(components.body),
-    });
+    return this.#lastRequest.clone();
   }
 
   /**
-   * Perform the API request
-   * @param {string} method - The HTTP Method to use
-   * @param {string} endpoint - The endpoint to target
-   * @param {string|object|array|undefined} body - The body to send
-   * @param {object|undefined} params - The query parameters to send
-   * @param {object|array|undefined} headers - Any temporary headers to include
-   * @returns {Response}
+   * Handles the post-processing of a response after a request is made.
+   *
+   * This method resets temporary hostname and headers, clones the response
+   * to store it as the last response, and returns the response augmented
+   * with a `refire` property.
+   *
+   * @param res - The response object received from the request.
+   * @param refire - A reference to the connector call that can be used to retry the request.
+   *
+   * @returns The response object extended with the `refire` property.
    */
-  protected async request(
-    method: HTTPMethods,
-    endpoint: string,
-    body?: RequestBody,
-    params: RequestParams = {},
-    headers: RequestHeaders = {},
-  ) {
-    await this.preRequest(method, endpoint, body, params, headers);
-
-    await fetch(this.#lastRequest!.clone())
-      .then((res) => this.postRequest(res))
-      .catch((e: Error) => console.error(e));
-
-    // Apply any middleware pre-request taps
-    await this.#middleware.applyRequestTap(this.#lastRequest!.clone(), () => {});
-
-    return this.#lastResponse!.clone();
-  }
-
-  /**
-   * After request cleanup and caching logic.
-   * @returns
-   */
-  protected async postRequest(response: Response | Error) {
+  protected postRequest(res: Response, refire: ConnectorCall): MaingoResponse {
     // reset temp hostname
     this.#tempHostname = undefined;
+    // set last response
+    this.#lastResponse = res.clone();
 
-    if (response instanceof Error) {
-      this.#lastResponse = undefined;
-      throw response;
-    }
-
-    this.#lastResponse = response;
-
-    this.#middleware.applyResponseTap(
-      this.#lastResponse.clone(),
-      this.#lastRequest!.clone(),
-    );
-
-    // // should this actually be before the response tap above?
-    this.#lastResponse = await this.#middleware.applyResponseMap(
-      this.#lastRequest!.clone(),
-      this.#lastResponse.clone(),
-    );
+    return Object.assign(res, { refire }) as MaingoResponse;
   }
 
-  public refire(): Promise<Response> {
-    const lastRequest = this.#lastRequest!;
+  /**
+   * Sends a request through a chain of middleware and ultimately performs the request using `fetch`.
+   *
+   * This method constructs a call stack by chaining middleware functions, where each middleware
+   * can process the request and pass it to the next middleware in the chain. The final step in the
+   * chain performs the actual HTTP request using `fetch` and processes the response.
+   *
+   * @param request - The `MaingoRequest` object containing the details of the request to be sent.
+   * @returns A promise that resolves to a `MaingoResponse` object containing the response data.
+   *
+   * @remarks
+   * - Middleware functions are applied in the order they are returned by `getMiddleware()`.
+   * - The `preRequest` method is called before the request is sent to modify or prepare the request.
+   * - The `postRequest` method is called after the response is received to process the response.
+   */
+  public request(request: MaingoRequest): Promise<MaingoResponse> {
+    const callStack = this.getMiddleware()
+      .reduce(
+        (next: ConnectorCall, middleware) => (req: MaingoRequest) => middleware(req, next),
+        (req: MaingoRequest) =>
+          fetch(this.preRequest(req))
+            .then((res) => this.postRequest(res, () => callStack(req))),
+      ) as ConnectorCall;
 
-    const url = new URL(lastRequest.url);
-    const endpoint = `${url.protocol}//${url.host}${url.pathname}`
-      .substring(this.config.hostname.length);
-
-    return this.request(
-      lastRequest.method as HTTPMethods,
-      endpoint,
-      lastRequest.body,
-      url.searchParams.entries(),
-      this.#tempHeaders,
-    );
+    return callStack(request);
   }
 }
