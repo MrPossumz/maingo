@@ -1,6 +1,6 @@
-import { createTypeGuard, Is } from "guardis";
+import type { Middleware } from "@/core/middleware-stack.ts";
+import { createTypeGuard, Is } from "@/guards.ts";
 import { AuthBase, type AuthConfigBase } from "./base.ts";
-import type { Middleware } from "@/middleware-stack.ts";
 
 /**
  * Configuration interface for Basic Authentication.

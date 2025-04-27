@@ -3,7 +3,7 @@ extensible swiss army knife for client HTTP requests while squeezing as much out
 can.
 
 It relies on the [Fetch Web API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) to
-power it's requests. Middleware and taps are also supported.
+power its requests. Middleware and taps are also supported.
 
 Looking for a convenient way to just package up a reusable API client for a specific API while
 avoiding the headaches of rolling your own auth logic or manually adding in type hinting? Maingo has

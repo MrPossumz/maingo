@@ -1,9 +1,9 @@
-import type { MaingoRequest, MaingoResponse, RequestHeaders, Stringable } from "../types.ts";
-import type { Middleware } from "@/middleware-stack.ts";
-import type { Client, ClientConfig } from "@/client.ts";
+import type { MaingoRequest, MaingoResponse, RequestHeaders, Stringable } from "@/types.ts";
+import type { Client, ClientConfig } from "@/core/client.ts";
+import type { Middleware } from "@/core/middleware-stack.ts";
+import type { ConnectorConfigBase } from "@/core/connectors/index.ts";
 import { appendParamsDelimited, appendParamsIndexed } from "@/utils/url-search-params.ts";
 import { Is } from "@/guards.ts";
-import type { ConnectorConfigBase } from "@/connectors/index.ts";
 
 export type MaingoConnector<
   Req extends MaingoRequest = MaingoRequest,
@@ -177,12 +177,12 @@ export class ConnectorBase<C extends Partial<ClientConfig> & ConnectorConfigBase
     return url;
   }
 
-	/**
-	 * Combines temporary headers, main headers, and permanent headers into a single `Headers` object.
-	 *
-	 * @param tempHeaders - Optional temporary headers to be merged with the main and permanent headers.
-	 * @returns A new `Headers` object containing the merged headers.
-	 */
+  /**
+   * Combines temporary headers, main headers, and permanent headers into a single `Headers` object.
+   *
+   * @param tempHeaders - Optional temporary headers to be merged with the main and permanent headers.
+   * @returns A new `Headers` object containing the merged headers.
+   */
   protected getHeaders(tempHeaders?: RequestHeaders) {
     const _tempHeaders = new Headers(tempHeaders);
 
@@ -199,8 +199,8 @@ export class ConnectorBase<C extends Partial<ClientConfig> & ConnectorConfigBase
    *
    * @param body - The body of the request, which can be a JSON object, JSON array, or other types.
    *
-   * @returns A `BodyInit` object if the body is a JSON object or array, or the original body if 
-	 * 					it is of another type. Returns `undefined` if the input body is `null` or `undefined`.
+   * @returns A `BodyInit` object if the body is a JSON object or array, or the original body if
+   * 					it is of another type. Returns `undefined` if the input body is `null` or `undefined`.
    */
   protected buildBody(body: MaingoRequest["body"]): BodyInit | undefined {
     if (!body) return undefined;

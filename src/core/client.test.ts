@@ -1,12 +1,11 @@
-import { mockFetch } from "@/utils/testing.ts";
 import { Client, createClient } from "./client.ts";
 import { assertEquals } from "@std/assert/equals";
-import type { Middleware } from "@/middleware-stack.ts";
 import { assert } from "@std/assert";
-import { RestConnector } from "@/connectors/rest.ts";
-import { GraphqlConnector } from "@/connectors/graphql.ts";
+import { GraphqlConnector } from "@/core/connectors/graphql.ts";
+import { RestConnector } from "@/core/connectors/rest.ts";
+import type { Middleware } from "@/core/middleware-stack.ts";
 
-Deno.test("Client initializes with default config values", () => {
+Deno.test("Client - initializes with default config values", () => {
   const client = createClient({
     connector: "rest",
     headers: { "Content-Type": "application/json" },
@@ -17,7 +16,7 @@ Deno.test("Client initializes with default config values", () => {
   assertEquals(client.hasMiddleware("auth"), false);
 });
 
-Deno.test("Client initializes with custom auth config", () => {
+Deno.test("Client - initializes with custom auth config", () => {
   const client = createClient({
     connector: "rest",
     headers: { "Content-Type": "application/json" },
@@ -29,7 +28,7 @@ Deno.test("Client initializes with custom auth config", () => {
   assert(client.hasMiddleware("auth"));
 });
 
-Deno.test("Client adds and retrieves middleware", () => {
+Deno.test("Client - adds and retrieves middleware", () => {
   const client = createClient({
     connector: "rest",
     headers: { "Content-Type": "application/json" },

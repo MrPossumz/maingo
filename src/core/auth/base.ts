@@ -1,5 +1,5 @@
-import type { Client } from "@/client.ts";
-import type { Middleware } from "@/middleware-stack.ts";
+import type { Client } from "@/core/client.ts";
+import type { Middleware } from "@/core/middleware-stack.ts";
 import type { AuthMethods } from "./index.ts";
 
 export interface AuthConfigBase {}

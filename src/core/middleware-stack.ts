@@ -1,5 +1,5 @@
 import type { MaingoRequest, MaingoResponse } from "@/types.ts";
-import type { ConnectorCall } from "@/connectors/base.ts";
+import type { ConnectorCall } from "@/core/connectors/base.ts";
 
 /**
  * Represents a middleware function in the request/response lifecycle.

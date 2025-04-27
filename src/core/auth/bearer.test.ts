@@ -1,4 +1,4 @@
-import BearerAuth from "@/auth/bearer.ts";
+import BearerAuth from "@/core/auth/bearer.ts";
 import { assert, assertEquals, assertThrows } from "@std/assert";
 
 Deno.test("BearerAuth - should throw an error for invalid config", () => {

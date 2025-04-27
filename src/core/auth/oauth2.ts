@@ -1,5 +1,5 @@
-import type { Middleware } from "@/middleware-stack.ts";
-import type { Client } from "@/client.ts";
+import type { Middleware } from "@/core/middleware-stack.ts";
+import type { Client } from "@/core/client.ts";
 import { createTypeGuard, Is } from "@/guards.ts";
 import { AuthBase, type AuthConfigBase } from "./base.ts";
 

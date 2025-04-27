@@ -1,4 +1,4 @@
-import type { Middleware } from "@/middleware-stack.ts";
+import type { Middleware } from "@/core/middleware-stack.ts";
 import type { RequestHeaders } from "@/types.ts";
 import type { DiscriminatedUnion } from "@/utils/types.ts";
 import { RestConnector, type RestConnectorConfig } from "./rest.ts";

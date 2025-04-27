@@ -1,8 +1,8 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
+import type { Client } from "@/core/client.ts";
 import OAuth2, { type OAuth2Config } from "./oauth2.ts";
-import type { Client } from "@/client.ts";
 
-Deno.test("OAuth2 constructor throws error for invalid config", () => {
+Deno.test("OAuth2 - constructor throws error for invalid config", () => {
   assertThrows(
     // @ts-expect-error We're purposefully passing bad data
     () => Promise.resolve(new OAuth2({})),
@@ -11,7 +11,7 @@ Deno.test("OAuth2 constructor throws error for invalid config", () => {
   );
 });
 
-Deno.test("OAuth2 getAuthentication adds Authorization header", async () => {
+Deno.test("OAuth2 - getAuthentication adds Authorization header", async () => {
   const mockClient = {} as Client;
   const mockAccessToken = "mockAccessToken";
   const mockConfig: OAuth2Config = {
@@ -40,7 +40,7 @@ Deno.test("OAuth2 getAuthentication adds Authorization header", async () => {
   assertEquals(result.headers["authorization"], `Bearer ${mockAccessToken}`);
 });
 
-Deno.test("OAuth2 getAccessToken caches token request", async () => {
+Deno.test("OAuth2 - getAccessToken caches token request", async () => {
   const mockClient = {} as Client;
   let callCount = 0;
   const mockConfig: OAuth2Config = {
@@ -68,7 +68,7 @@ Deno.test("OAuth2 getAccessToken caches token request", async () => {
   assertEquals(callCount, 1);
 });
 
-Deno.test("OAuth2 refreshTokenCallback is used when token expires", async () => {
+Deno.test("OAuth2 - refreshTokenCallback is used when token expires", async () => {
   const mockClient = {} as Client;
   const mockAccessToken = "expiredAccessToken";
   const mockNewAccessToken = "newAccessToken";

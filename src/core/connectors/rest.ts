@@ -1,7 +1,7 @@
-import type { Client } from "@/client.ts";
-import type { MaingoRequest, MaingoResponse } from "../types.ts";
-import { ConnectorBase, type MaingoConnector } from "./base.ts";
-import type { ConnectorConfigBase } from "@/connectors/index.ts";
+import type { MaingoRequest, MaingoResponse } from "@/types.ts";
+import type { Client } from "@/core/client.ts";
+import { ConnectorBase, type MaingoConnector } from "@/core/connectors/base.ts";
+import type { ConnectorConfigBase } from "@/core/connectors/index.ts";
 
 export interface RestConnectorConfig extends ConnectorConfigBase {}
 

@@ -1,12 +1,12 @@
-import { type ConnectorConfig, getConnector } from "@/connectors/index.ts";
-import type { MaingoRestConnector } from "@/connectors/rest.ts";
-import type { MaingoGraphqlConnector } from "@/connectors/graphql.ts";
-import { type AuthConfig, type AuthMethods, getAuth } from "@/auth/index.ts";
+import { type AuthConfig, type AuthMethods, getAuth } from "@/core/auth/index.ts";
+import type { MaingoGraphqlConnector } from "@/core/connectors/graphql.ts";
+import { type ConnectorConfig, getConnector } from "@/core/connectors/index.ts";
+import type { MaingoRestConnector } from "@/core/connectors/rest.ts";
 import {
   type Middleware,
   MiddlewareStack,
   type MiddlewareStackInterface,
-} from "@/middleware-stack.ts";
+} from "@/core/middleware-stack.ts";
 
 export type ClientConfig = ConnectorConfig & {
   /** The authentication method used by the API. */
@@ -71,7 +71,7 @@ export class Client {
     const authMiddleware = this.auth?.getAuthentication(this);
 
     if (authMiddleware) {
-      this.middlewareStack.use(authMiddleware, 'auth');
+      this.middlewareStack.use(authMiddleware, "auth");
     }
 
     return this.connector.init(this);
